@@ -4,6 +4,7 @@ import { ScoreCard } from "./components/ScoreCard";
 import { TimerBar } from "./components/TimerBar";
 import { History } from "./components/History";
 import { WordValidation } from "./components/WordValidation";
+import { FaPlay, FaRedoAlt } from 'react-icons/fa';  // Importing React Icons
 
 // --- Helpers ---
 const randLetter = () => ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
@@ -14,13 +15,12 @@ const lastAlpha = (w) => {
 const onlyLetters = (w) => (w || "").toLowerCase().replace(/[^a-z]/g, "");
 
 export default function App() {
-  // Game state
   const [players, setPlayers] = useState([
     { name: "Player 1", score: 0 },
     { name: "Player 2", score: 0 },
   ]);
   const [turn, setTurn] = useState(0); // index into players
-  const [startLetter, setStartLetter] = useState(randLetter());
+  const [startLetter, setStartLetter] = useState(randLetter()); // The letter the first word starts with
   const [input, setInput] = useState("");
   const [timeLeft, setTimeLeft] = useState(TURN_SECONDS);
   const [history, setHistory] = useState([]);
@@ -158,47 +158,58 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 p-6">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <header className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold tracking-tight">Shiritori — 2‑Player (React)</h1>
-          <div className="flex gap-2">
-            <button onClick={newGame} className="px-3 py-2 rounded-xl bg-slate-900 text-white text-sm hover:bg-slate-800">New Game</button>
-            <button onClick={onRandomizeLetter} className="px-3 py-2 rounded-xl bg-white border text-sm hover:bg-slate-100" title="Allowed before the first valid word">Randomize start letter</button>
+    <div className="bg-gradient-to-b from-blue-950 via-indigo-900 to-indigo-900 min-h-screen">
+      <div className="min-h-screen p-6 flex items-center justify-center">
+        <div className="mx-auto max-w-5xl space-y-6 bg-white/10 backdrop-blur-md rounded-3xl shadow-2xl p-8 border border-white/20">
+          <header className="flex items-center justify-between">
+            <h1 className="2xl:text-4xl md:text-2xl text-xl font-bold tracking-tight text-center text-white">Shiritori — 2‑Player</h1>
+            <div className="flex gap-2">
+              <button onClick={newGame} className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-lg transition-all">
+                <FaRedoAlt className="inline-block mr-2" /> New Game
+              </button>
+              <button onClick={onRandomizeLetter} className="px-4 py-2 rounded-xl bg-white text-indigo-600 border border-indigo-600 hover:bg-indigo-50 transition-all text-sm shadow-lg">
+                <FaPlay className="inline-block mr-2" /> Randomize Start Letter
+              </button>
+            </div>
+          </header>
+
+          {/* Display the starting letter */}
+          <div className="mb-6 text-center">
+            <p className="text-xl text-white">The word must start with the letter: <strong className="text-2xl font-bold">{requiredLetter.toUpperCase()}</strong></p>
           </div>
-        </header>
 
-        {/* Scoreboard */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <ScoreCard name={players[0].name} score={players[0].score} active={turn === 0} />
-          <ScoreCard name={players[1].name} score={players[1].score} active={turn === 1} />
+          {/* Scoreboard */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <ScoreCard name={players[0].name} score={players[0].score} active={turn === 0} />
+            <ScoreCard name={players[1].name} score={players[1].score} active={turn === 1} />
+          </div>
+
+          {/* Word Submission */}
+          <div className="mt-4 text-center text-white">
+            <form onSubmit={submitWord} className="space-x-3">
+              <input
+                className="border p-3 rounded-xl text-lg w-3/4"
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={`Enter a word starting with ${requiredLetter}`}
+              />
+              <button type="submit" className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-white font-bold text-lg transition-all">
+                Submit
+              </button>
+            </form>
+            {message && <div className="mt-3 text-red-400 text-lg">{message}</div>}
+          </div>
+
+          {/* Timer */}
+          <TimerBar timeLeft={timeLeft} />
+
+          {/* Word History */}
+          <History items={history} />
+
+          {/* Word Details (from dictionary API) */}
+          {message && <WordValidation className="text-white" wordDetails={history.slice(-1)[0]} />}
         </div>
-
-        {/* Word Submission */}
-        <div className="mt-4">
-          <form onSubmit={submitWord}>
-            <input
-              className="border rounded p-2"
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={`Enter a word starting with ${requiredLetter}`}
-            />
-            <button type="submit" className="ml-2 p-2 bg-blue-500 text-white rounded">
-              Submit
-            </button>
-          </form>
-          {message && <div className="mt-2 text-red-500">{message}</div>}
-        </div>
-
-        {/* Timer */}
-        <TimerBar timeLeft={timeLeft} />
-
-        {/* Word History */}
-        <History items={history} />
-
-        {/* Word Details (from dictionary API) */}
-        {message && <WordValidation wordDetails={history.slice(-1)[0]} />}
       </div>
     </div>
   );
