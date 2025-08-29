@@ -1,12 +1,11 @@
 import React, { useEffect, useState, useRef } from "react";
-import { TURN_SECONDS, MIN_LEN, ALPHABET } from './components/constants'; // Import constants
+import { TURN_SECONDS, MIN_LEN, ALPHABET } from './components/constants';
 import { ScoreCard } from "./components/ScoreCard";
 import { TimerBar } from "./components/TimerBar";
 import { History } from "./components/History";
 import { WordValidation } from "./components/WordValidation";
-import { FaPlay, FaRedoAlt } from 'react-icons/fa';  // Importing React Icons
+import { FaPlay, FaRedoAlt, FaEdit } from 'react-icons/fa';
 
-// --- Helpers ---
 const randLetter = () => ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
 const lastAlpha = (w) => {
   const m = (w || "").toLowerCase().match(/[a-z](?=[^a-z]*$)/);
@@ -16,6 +15,7 @@ const onlyLetters = (w) => (w || "").toLowerCase().replace(/[^a-z]/g, "");
 
 export default function App() {
   const [players, setPlayers] = useState([
+    
     { name: "Player 1", score: 0 },
     { name: "Player 2", score: 0 },
   ]);
@@ -26,6 +26,8 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [editing, setEditing] = useState(null); // Track which player is editing their name
+  const [gameStarted, setGameStarted] = useState(false); // Track if the game has started
   const used = useRef(new Set()); // case-insensitive used words
 
   const requiredLetter = startLetter;
@@ -33,6 +35,7 @@ export default function App() {
 
   // Countdown per turn
   useEffect(() => {
+    if (!gameStarted) return;
     setTimeLeft(TURN_SECONDS);
     const id = setInterval(() => {
       setTimeLeft((t) => {
@@ -45,7 +48,7 @@ export default function App() {
       });
     }, 1000);
     return () => clearInterval(id);
-  }, [turn]);
+  }, [turn, gameStarted]);
 
   const switchTurn = () => setTurn((t) => (t === 0 ? 1 : 0));
 
@@ -168,68 +171,145 @@ export default function App() {
     switchTurn();
   };
 
+  // Handle name change
+  const handleNameChange = (playerIndex, newName) => {
+    setPlayers((ps) => {
+      const updatedPlayers = [...ps];
+      updatedPlayers[playerIndex].name = newName;
+      return updatedPlayers;
+    });
+  };
+
+  // Start editing player name
+  const startEditing = (playerIndex) => {
+    setEditing(playerIndex);
+  };
+
+  // Cancel editing
+  const cancelEditing = () => {
+    setEditing(null);
+  };
+
+  // Start the game
+  const startGame = () => {
+    setGameStarted(true);
+  };
+
   return (
     <div className="bg-gradient-to-b from-blue-950 via-indigo-900 to-indigo-900 min-h-screen">
       <div className="min-h-screen p-6 flex items-center justify-center">
         <div className="mx-auto max-w-5xl space-y-6 bg-white/10 backdrop-blur-md rounded-3xl shadow-2xl p-8 border border-white/20">
-          <header className="flex items-center justify-between">
-            <h1 className="2xl:text-4xl md:text-2xl text-xl font-bold tracking-tight text-center text-white">Shiritori — 2‑Player</h1>
-            <div className="flex gap-2">
-              <button onClick={newGame} className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-lg transition-all">
-                <FaRedoAlt className="inline-block mr-2" /> New Game
+          {!gameStarted ? (
+            <div className="text-center text-white">
+              <h1 className="text-4xl font-bold mb-4">Welcome to Shiritori!</h1>
+              <button
+                onClick={startGame}
+                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl cursor-pointer text-white font-bold text-lg transition-all"
+              >
+                Start Game
               </button>
-              <button onClick={onRandomizeLetter} className="px-4 py-2 rounded-xl bg-white text-indigo-600 border border-indigo-600 hover:bg-indigo-50 transition-all text-sm shadow-lg">
-                <FaPlay className="inline-block mr-2" /> Randomize Start Letter
-              </button>
+              <div className="mt-6 text-lg">
+                <h2 className="font-semibold">Game Rules:</h2>
+                <ul className="list-disc ml-6 text-left">
+                  <li>Players take turns to submit words.</li>
+                  <li>Each word must start with the last letter of the previous word.</li>
+                  <li>Words must be at least 4 letters long.</li>
+                  <li>Words cannot be repeated.</li>
+                  <li>If a player passes, they lose 1 point and the next player takes their turn.</li>
+                  <li>Each player has a limited time to submit a word before their turn is over.</li>
+                </ul>
+              </div>
             </div>
-          </header>
+          ) : (
+            <>
+              <header className="flex items-center justify-between">
+                <h1 className="2xl:text-4xl md:text-2xl text-xl font-bold tracking-tight text-center text-white">Shiritori — 2‑Player</h1>
+                <div className="flex gap-2">
+                  <button onClick={newGame} className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-lg transition-all">
+                    <FaRedoAlt className="inline-block mr-2 cursor-pointer" /> New Game
+                  </button>
+                  <button onClick={onRandomizeLetter} className="px-4 py-2 rounded-xl bg-white text-indigo-600 border border-indigo-600 hover:bg-indigo-50 transition-all text-sm shadow-lg">
+                    <FaPlay className="inline-block mr-2 cursor-pointer" /> Randomize Start Letter
+                  </button>
+                </div>
+              </header>
 
-          {/* Display the starting letter */}
-          <div className="mb-6 text-center">
-            <p className="text-xl text-white">The word must start with the letter: <strong className="text-2xl font-bold">{requiredLetter.toUpperCase()}</strong></p>
-          </div>
+              {/* Display the starting letter */}
+              <div className="mb-6 text-center">
+                <p className="text-xl text-white">The word must start with the letter: <strong className="text-2xl font-bold">{requiredLetter.toUpperCase()}</strong></p>
+              </div>
 
-          {/* Scoreboard */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <ScoreCard name={players[0].name} score={players[0].score} active={turn === 0} />
-            <ScoreCard name={players[1].name} score={players[1].score} active={turn === 1} />
-          </div>
+              {/* Player Names and Edit */}
+              <div className="mb-6 text-center text-black">
+                {players.map((player, index) => (
+                  <div key={index} className="mb-3">
+                    {editing === index ? (
+                      <div className="flex items-center   justify-center gap-2">
+                        <input
+                          type="text"
+                          className="p-2 border text-white border-white rounded-md"
+                          value={player.name}
+                          onChange={(e) => handleNameChange(index, e.target.value)}
+                        />
+                        <button className="bg-indigo-600 text-white px-3 cursor-pointer py-1 rounded-md" onClick={cancelEditing}>
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="text-2xl font-bold">{player.name}</span>
+                        <button onClick={() => startEditing(index)} className="text-indigo-500">
+                          <FaEdit />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
 
-          {/* Word Submission */}
-          <div className="mt-4 text-center text-white">
-            <form onSubmit={submitWord} className="space-x-3">
-              <input
-                className="border p-3 rounded-xl text-lg w-3/4"
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={`Enter a word starting with ${requiredLetter}`}
-              />
-              <button type="submit" className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-white font-bold text-lg transition-all">
-                Submit
-              </button>
-            </form>
-            {message && <div className="mt-3 text-red-400 text-lg">{message}</div>}
-          </div>
+              {/* Scoreboard */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <ScoreCard name={players[0].name} score={players[0].score} active={turn === 0} />
+                <ScoreCard name={players[1].name} score={players[1].score} active={turn === 1} />
+              </div>
 
-          {/* Pass Turn Button */}
-          <div className="text-center mt-4">
-            <button
-              onClick={passTurn}
-              className="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-xl text-white font-bold text-lg transition-all"
-            >
-              Pass Turn
-            </button>
-          </div>
+              {/* Word Submission */}
+              <div className="mt-4 text-center text-white">
+                <form onSubmit={submitWord} className="space-x-3">
+                  <input
+                    className="border p-3 rounded-xl text-lg w-3/4"
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder={`Enter a word starting with ${requiredLetter}`}
+                  />
+                  <button type="submit" className="px-6 py-3 bg-indigo-600 cursor-pointer hover:bg-indigo-700 rounded-xl text-white font-bold text-lg transition-all">
+                    Submit
+                  </button>
+                </form>
+                {message && <div className="mt-3 text-red-400 text-lg">{message}</div>}
+              </div>
 
-          {/* Timer */}
-          <TimerBar timeLeft={timeLeft} />
+              {/* Pass Turn Button */}
+              <div className="text-center mt-4">
+                <button
+                  onClick={passTurn}
+                  className="px-6 py-3 bg-red-600 cursor-pointer hover:bg-red-700 rounded-xl text-white font-bold text-lg transition-all"
+                >
+                  Pass Turn
+                </button>
+              </div>
 
-          {/* Word History */}
-          <History items={history} />
+              {/* Timer */}
+              <TimerBar timeLeft={timeLeft} />
 
-          {/* Word Details (from dictionary API) */}
-          {message && <WordValidation className="text-white" wordDetails={history.slice(-1)[0]} />}
+              {/* Word History */}
+              <History items={history} />
+
+              {/* Word Details (from dictionary API) */}
+              {message && <WordValidation className="text-white" wordDetails={history.slice(-1)[0]} />}
+            </>
+          )}
         </div>
       </div>
     </div>
