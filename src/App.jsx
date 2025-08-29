@@ -1,34 +1,35 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { WordValidation } from './components/WordValidation';
-import { WordHistory } from './components/WordHistory';
-import { ScoreCard } from './components/ScoreCard';
-import { TimerBar } from './components/TimerBar';
-import axios from 'axios';
+import React, { useEffect, useState, useRef } from "react";
+import { TURN_SECONDS, MIN_LEN, ALPHABET } from './components/constants'; // Import constants
+import { ScoreCard } from "./components/ScoreCard";
+import { TimerBar } from "./components/TimerBar";
+import { History } from "./components/History";
+import { WordValidation } from "./components/WordValidation";
 
-// --- Configurable constants ---
-const TURN_SECONDS = 15; // countdown per turn
-const MIN_LEN = 4; // minimum letters per word
-const ALPHABET = 'abcdefghijklmnopqrstuvwxyz';
-
+// --- Helpers ---
 const randLetter = () => ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
-const onlyLetters = (w) => (w || '').toLowerCase().replace(/[^a-z]/g, '');
+const lastAlpha = (w) => {
+  const m = (w || "").toLowerCase().match(/[a-z](?=[^a-z]*$)/);
+  return m ? m[0] : "";
+};
+const onlyLetters = (w) => (w || "").toLowerCase().replace(/[^a-z]/g, "");
 
 export default function App() {
   // Game state
   const [players, setPlayers] = useState([
-    { name: 'Player 1', score: 0 },
-    { name: 'Player 2', score: 0 },
+    { name: "Player 1", score: 0 },
+    { name: "Player 2", score: 0 },
   ]);
-  const [turn, setTurn] = useState(0);
+  const [turn, setTurn] = useState(0); // index into players
   const [startLetter, setStartLetter] = useState(randLetter());
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [timeLeft, setTimeLeft] = useState(TURN_SECONDS);
   const [history, setHistory] = useState([]);
-  const [message, setMessage] = useState('');
-  const used = useRef(new Set());
-  const [wordDetails, setWordDetails] = useState(null); // To store the word details from API
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const used = useRef(new Set()); // case-insensitive used words
 
   const requiredLetter = startLetter;
+  const lastWord = history.findLast?.((h) => h.valid) || [...history].reverse().find((h) => h.valid);
 
   // Countdown per turn
   useEffect(() => {
@@ -49,75 +50,122 @@ export default function App() {
   const switchTurn = () => setTurn((t) => (t === 0 ? 1 : 0));
 
   function enforceStructure(raw) {
-    const word = (raw || '').trim().toLowerCase();
+    const word = (raw || "").trim().toLowerCase();
     const letters = onlyLetters(word);
-
     if (letters.length < MIN_LEN) return { ok: false, reason: `min ${MIN_LEN} letters` };
-    if (used.current.has(letters)) return { ok: false, reason: 'already used' };
+    const mustStartWith = lastWord ? lastAlpha(lastWord.word) : requiredLetter;
+    if (letters[0] !== mustStartWith) return { ok: false, reason: `must start with '${mustStartWith}'` };
+    if (used.current.has(letters)) return { ok: false, reason: "already used" };
     return { ok: true, word: letters };
   }
 
   async function validateWithDictionary(word) {
     try {
-      const res = await axios.get(
-        `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`
-      );
-      if (res.status !== 200) return { ok: false };
-      const data = res.data[0];
-      const meaning = data.meanings[0].definitions[0].definition;
-      const phonetic = data.phonetic || 'N/A';
-      const origin = data.origin || 'N/A';
-
-      return { ok: true, definition: meaning, phonetic, origin };
-    } catch (error) {
-      console.error('Error fetching dictionary data:', error);
+      const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+      if (!res.ok) return { ok: false };
+      const data = await res.json();
+      const firstMeaning = data?.[0]?.meanings?.[0];
+      const def = firstMeaning?.definitions?.[0]?.definition;
+      if (def && typeof def === "string" && def.length > 0) {
+        return { ok: true, definition: def };
+      }
+      return { ok: false };
+    } catch (e) {
       return { ok: false };
     }
   }
 
   async function submitWord(e) {
-    e.preventDefault();
+    e?.preventDefault?.();
+    if (loading) return;
     const s = enforceStructure(input);
+    const startedAt = Date.now();
     if (!s.ok) {
-      setMessage(`Invalid word: ${s.reason}`);
+      applyResult({ valid: false, reason: s.reason, definition: "" }, startedAt, input);
       return;
     }
 
+    setLoading(true);
+    setMessage("Validating with dictionary…");
     const v = await validateWithDictionary(s.word);
+    setLoading(false);
+
     if (!v.ok) {
-      setMessage('Word not found in dictionary!');
+      applyResult({ valid: false, reason: "not in dictionary", definition: "" }, startedAt, s.word);
       return;
     }
 
-    setWordDetails({
-      definition: v.definition,
-      phonetic: v.phonetic,
-      origin: v.origin,
-    });
-    applyResult({ valid: true, reason: '', definition: v.definition });
+    applyResult({ valid: true, reason: "", definition: v.definition }, startedAt, s.word);
   }
 
-  function applyResult(result) {
-    setHistory((h) => [...h, { word: input, valid: result.valid, definition: result.definition }]);
+  function applyResult(result, startedAt, rawWord) {
+    const timeTaken = Math.max(0, Math.round((Date.now() - startedAt) / 1000));
+    const by = turn;
+
+    setHistory((h) => [
+      ...h,
+      { word: onlyLetters(rawWord), valid: result.valid, reason: result.reason, by, timeTaken, definition: result.definition },
+    ]);
+
     setPlayers((ps) => {
-      const next = [...ps];
-      next[turn].score += result.valid ? 1 : -1;
+      const next = ps.map((p) => ({ ...p }));
+      next[by].score += result.valid ? 1 : -1;
       return next;
     });
-    setInput('');
+
+    if (result.valid) {
+      used.current.add(onlyLetters(rawWord));
+      setStartLetter(lastAlpha(rawWord));
+      setMessage("Nice! +1 point.");
+    } else {
+      setMessage(`Oops (${result.reason}). -1 point.`);
+    }
+
+    setInput("");
     switchTurn();
   }
 
   function handleTimeout() {
+    setHistory((h) => [
+      ...h,
+      { word: "⏰ timeout", valid: false, reason: "timeout", by: turn, timeTaken: TURN_SECONDS, definition: "" },
+    ]);
+    setPlayers((ps) => {
+      const next = ps.map((p) => ({ ...p }));
+      next[turn].score -= 1;
+      return next;
+    });
     setMessage("Time's up! -1 point.");
     switchTurn();
   }
+
+  const onRandomizeLetter = () => {
+    if (!lastWord) setStartLetter(randLetter());
+  };
+
+  const turnPlayer = players[turn];
+
+  // New Game function (make sure it's defined)
+  const newGame = () => {
+    setPlayers((ps) => ps.map((p) => ({ ...p, score: 0 })));
+    setTurn(0);
+    setStartLetter(randLetter());
+    setInput("");
+    setTimeLeft(TURN_SECONDS);
+    setHistory([]);
+    setMessage("");
+    used.current = new Set();
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 p-6">
       <div className="mx-auto max-w-5xl space-y-6">
         <header className="flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-tight">Shiritori — 2‑Player (React)</h1>
+          <div className="flex gap-2">
+            <button onClick={newGame} className="px-3 py-2 rounded-xl bg-slate-900 text-white text-sm hover:bg-slate-800">New Game</button>
+            <button onClick={onRandomizeLetter} className="px-3 py-2 rounded-xl bg-white border text-sm hover:bg-slate-100" title="Allowed before the first valid word">Randomize start letter</button>
+          </div>
         </header>
 
         {/* Scoreboard */}
@@ -147,10 +195,10 @@ export default function App() {
         <TimerBar timeLeft={timeLeft} />
 
         {/* Word History */}
-        <WordHistory items={history} />
+        <History items={history} />
 
         {/* Word Details (from dictionary API) */}
-        {wordDetails && <WordValidation wordDetails={wordDetails} />}
+        {message && <WordValidation wordDetails={history.slice(-1)[0]} />}
       </div>
     </div>
   );
