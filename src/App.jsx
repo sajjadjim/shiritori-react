@@ -273,6 +273,12 @@ export default function App() {
                 <ScoreCard name={players[0].name} score={players[0].score} active={turn === 0} />
                 <ScoreCard name={players[1].name} score={players[1].score} active={turn === 1} />
               </div>
+
+{/* Display the starting letter */}
+              <div className="mb-6 text-center md:hidden block">
+                <p className="text-md text-white">The word must start with the letter: <strong className="text-lg font-bold">{requiredLetter.toUpperCase()}</strong></p>
+              </div>
+
                                 {/* Timer */}
               <div className="block md:hidden"><TimerBar className="" timeLeft={timeLeft} /></div>
               {/* Word Submission */}
