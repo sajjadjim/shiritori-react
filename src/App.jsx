@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useRef } from "react";
-import { TURN_SECONDS, MIN_LEN, ALPHABET } from './components/constants';
+import { TURN_SECONDS, MIN_LEN, ALPHABET } from './components/constants'; // Import constants
 import { ScoreCard } from "./components/ScoreCard";
 import { TimerBar } from "./components/TimerBar";
 import { History } from "./components/History";
 import { WordValidation } from "./components/WordValidation";
-import { FaPlay, FaRedoAlt, FaEdit } from 'react-icons/fa';
+import { FaPlay, FaRedoAlt, FaEdit } from 'react-icons/fa';  // Importing React Icons
 
+// --- Helpers ---
 const randLetter = () => ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
 const lastAlpha = (w) => {
   const m = (w || "").toLowerCase().match(/[a-z](?=[^a-z]*$)/);
@@ -146,7 +147,7 @@ export default function App() {
     if (!lastWord) setStartLetter(randLetter());
   };
 
-  const turnPlayer = players[turn];
+  // const turnPlayer = players[turn];
 
   // New Game function (make sure it's defined)
   const newGame = () => {

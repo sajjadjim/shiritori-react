@@ -17,16 +17,13 @@ export function History({ items }) {
           }`}
         >
           <div className="flex justify-between items-center">
-            {/* Word & Validity */}
             <div className="flex items-center">
-              {/* Word */}
               <div className="font-semibold text-lg">{i + 1}. {h.word}</div>
               <span
                 className={`ml-2 text-xs font-medium ${
                   h.valid ? "text-emerald-700" : "text-rose-700"
                 }`}
               >
-                {/* Validity Indicator */}
                 {h.valid ? (
                   <FaCheckCircle className="inline-block mr-1 text-emerald-700" />
                 ) : (
@@ -35,14 +32,10 @@ export function History({ items }) {
                 {h.valid ? "valid" : h.reason || "invalid"}
               </span>
             </div>
-
-            {/* Time Taken */}
             <div className="text-xs text-slate-600">
               by P{h.by + 1} · {h.timeTaken}s
             </div>
           </div>
-
-          {/* Word Definition (optional) */}
           {h.definition && (
             <p className="text-sm mt-1 text-slate-700 line-clamp-2">
               {h.definition}
