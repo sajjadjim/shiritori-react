@@ -273,7 +273,8 @@ export default function App() {
                 <ScoreCard name={players[0].name} score={players[0].score} active={turn === 0} />
                 <ScoreCard name={players[1].name} score={players[1].score} active={turn === 1} />
               </div>
-
+                                {/* Timer */}
+              <div className="block md:hidden"><TimerBar className="" timeLeft={timeLeft} /></div>
               {/* Word Submission */}
               <div className="mt-4 text-center text-white">
                 <form onSubmit={submitWord} className="space-x-3">
@@ -284,7 +285,8 @@ export default function App() {
                     onChange={(e) => setInput(e.target.value)}
                     placeholder={`Enter a word starting with ${requiredLetter}`}
                   />
-                  <button type="submit" className="px-6 py-3 bg-indigo-600 cursor-pointer hover:bg-indigo-700 rounded-xl text-white font-bold text-lg transition-all">
+
+                  <button type="submit" className="px-6 py-3 md:mt-0 mt-2 bg-indigo-600 cursor-pointer hover:bg-indigo-700 rounded-xl text-white font-bold text-lg transition-all">
                     Submit
                   </button>
                 </form>
@@ -302,7 +304,7 @@ export default function App() {
               </div>
 
               {/* Timer */}
-              <TimerBar timeLeft={timeLeft} />
+              <div className="hidden md:block"><TimerBar className="" timeLeft={timeLeft} /></div>
 
               {/* Word History */}
               <History items={history} />

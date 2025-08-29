@@ -19,7 +19,7 @@ export function TimerBar({ timeLeft }) {
         {timeLeft === 0 ? (
           <span className="text-read-400">Time's Up!</span>
         ) : (
-          <span className="text-white">{timeLeft}</span>
+          <span className="text-white hidden md:block">{timeLeft}</span>
         )}
       </div>
     </div>
