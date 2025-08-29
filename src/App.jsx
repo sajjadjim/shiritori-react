@@ -116,7 +116,7 @@ export default function App() {
     if (result.valid) {
       used.current.add(onlyLetters(rawWord));
       setStartLetter(lastAlpha(rawWord));
-      setMessage("Nice! +1 point.");
+      setMessage(<span style={{ color: "limegreen" }}>Nice! +1 point.</span>);
     } else {
       setMessage(`Oops (${result.reason}). -1 point.`);
     }
@@ -155,6 +155,17 @@ export default function App() {
     setHistory([]);
     setMessage("");
     used.current = new Set();
+  };
+
+  // Handle pass turn functionality
+  const passTurn = () => {
+    setPlayers((ps) => {
+      const next = ps.map((p) => ({ ...p }));
+      next[turn].score -= 1; // Penalty for passing
+      return next;
+    });
+    setMessage("You passed your turn! -1 point.");
+    switchTurn();
   };
 
   return (
@@ -199,6 +210,16 @@ export default function App() {
               </button>
             </form>
             {message && <div className="mt-3 text-red-400 text-lg">{message}</div>}
+          </div>
+
+          {/* Pass Turn Button */}
+          <div className="text-center mt-4">
+            <button
+              onClick={passTurn}
+              className="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-xl text-white font-bold text-lg transition-all"
+            >
+              Pass Turn
+            </button>
           </div>
 
           {/* Timer */}
