@@ -198,7 +198,7 @@ export default function App() {
 
   return (
     <div className="bg-gradient-to-b from-blue-950 via-indigo-900 to-indigo-900 min-h-screen">
-      <div className="min-h-screen p-6 flex items-center justify-center">
+      <div className="min-h-screen md:p-6 p-3 flex items-center justify-center">
         <div className="mx-auto max-w-5xl space-y-6 bg-white/10 backdrop-blur-md rounded-3xl shadow-2xl p-8 border border-white/20">
           {!gameStarted ? (
             <div className="text-center text-white">
